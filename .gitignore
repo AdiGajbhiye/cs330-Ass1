@@ -1,0 +1,8 @@
+bin
+filesys
+machine
+Makefile
+Makefile.common
+Makefile.dep
+network
+vm

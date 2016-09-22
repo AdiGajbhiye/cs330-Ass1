@@ -1,0 +1,15 @@
+interrupt.o
+list.o
+main.o
+scheduler.o
+stats.o
+switch.o
+synchlist.o
+synch.o
+sysdep.o
+system.o
+thread.o
+threadtest.o
+timer.o
+utility.o
+nachos

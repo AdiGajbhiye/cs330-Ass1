@@ -1,0 +1,6 @@
+Sleep:
+	waiting list define in thread/system.h
+	In exception.cc check argument.if argument is 0 then yield cpu otherwise sorted insert 
+currentThread in waitingList and put thread to sleep.
+	In timeinterrupthandler return if waitingList is empty otherwise check top element wait time. if 
+greater than current time then return else remove from waiting List and schedule it.

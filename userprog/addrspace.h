@@ -23,7 +23,7 @@ class ProcessAddrSpace {
     ProcessAddrSpace(OpenFile *executable);	// Create an address space,
 					// initializing it with the program
 					// stored in the file "executable"
-    ProcessAddrSpace();	// Create an address space,
+    ProcessAddrSpace(unsigned int parentStartPage, unsigned int parentVirtualPages);	// Create an address space,
     ~ProcessAddrSpace();			// De-allocate an address space
 
     void InitUserCPURegisters();		// Initialize user-level CPU registers,
@@ -31,7 +31,7 @@ class ProcessAddrSpace {
 
     void SaveStateOnSwitch();			// Save/restore address space-specific
     void RestoreStateOnSwitch();		// info on a context switch 
-    TranslationEntry *getPageTable();
+    unsigned int getStartPage();
     unsigned int getVirtualPages();
 
   private:

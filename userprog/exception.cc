@@ -61,34 +61,22 @@ static void WriteDone(int arg) { writeDone->V(); }
 
 List waitingList;
 static void func(int dummy){
-    DEBUG('t', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
-
-    DEBUG('z', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
     // If the old thread gave up the processor because it was finishing,
     // we need to delete its carcass.  Note we cannot delete the thread
     // before now (for example, in NachOSThread::FinishThread()), because up to this
     // point, we were still running on the old thread's stack!
     if (threadToBeDestroyed != NULL) {
-        DEBUG('t', "destrying thread \"%s\"\n", currentThread->getName());
         delete threadToBeDestroyed;
         threadToBeDestroyed = NULL;
     }
-    DEBUG('z', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
 #ifdef USER_PROGRAM
     if (currentThread->space != NULL) {         // if there is an address space
 
-        DEBUG('t', "thread space%s\"\n", currentThread->getName());
         currentThread->RestoreUserState();     // to restore, do it.
-        DEBUG('t', "thread space restored %d\n", machine->ReadRegister(2));
-        DEBUG('z', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
         currentThread->space->RestoreStateOnSwitch();
-        DEBUG('t', "thread space restored %d\n", machine->ReadRegister(2));
-        DEBUG('z', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
     }
 #endif
     machine->Run();
-    DEBUG('t', "ready to run %d\n", machine->ReadRegister(2));
-    DEBUG('z', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
 }
 
 static void ConvertIntToHex (unsigned v, Console *console)
@@ -253,11 +241,13 @@ ExceptionHandler(ExceptionType which)
        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
     }   
     else if ((which == SyscallException) && (type == SYScall_Yield)) {
-       currentThread->YieldCPU();
        // Advance program counters.
        machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
        machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
+       IntStatus oldLevel = interrupt->SetLevel(IntOff);
+       currentThread->YieldCPU();
+       (void) interrupt->SetLevel(oldLevel);
     }   
     else if ((which == SyscallException) && (type == SYScall_Sleep)) {
        int sleepTicks = machine->ReadRegister(4);
@@ -308,7 +298,8 @@ ExceptionHandler(ExceptionType which)
        newThread = new NachOSThread("child");
        currentThread->InitializeChild(newThread->getPID());
        ProcessAddrSpace *space;
-       space = new ProcessAddrSpace();
+       space = new ProcessAddrSpace((currentThread->space)->getStartPage(), 
+				    (currentThread->space)->getVirtualPages());
        newThread->space = space;
        machine->WriteRegister(2,0);
        newThread->SaveUserState();

@@ -116,9 +116,9 @@ ProcessAddrSpace::ProcessAddrSpace(OpenFile *executable)
 
 }
 
-TranslationEntry *
-ProcessAddrSpace::getPageTable(){
-    return NachOSpageTable;
+unsigned int
+ProcessAddrSpace::getStartPage(){
+    return NachOSpageTable[0].physicalPage;
 }
 
 unsigned int
@@ -126,12 +126,9 @@ ProcessAddrSpace::getVirtualPages(){
     return numPagesInVM;
 }
 
-ProcessAddrSpace::ProcessAddrSpace(){
+ProcessAddrSpace::ProcessAddrSpace(unsigned int parentStartPage, unsigned int parentVirtualPages){
     unsigned int i;
-    TranslationEntry *parentTable;
-    parentTable = (currentThread->space)->getPageTable();
 // first, set up the translation
-    unsigned int parentVirtualPages = (currentThread->space)->getVirtualPages(); 
     NachOSpageTable = new TranslationEntry[parentVirtualPages];
     for (i = 0; i < parentVirtualPages; i++) {
 	NachOSpageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
@@ -141,7 +138,7 @@ ProcessAddrSpace::ProcessAddrSpace(){
 	NachOSpageTable[i].dirty = FALSE;
 	NachOSpageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
     }
-    unsigned int parentStart = parentTable[0].physicalPage * PageSize;
+    unsigned int parentStart = parentStartPage * PageSize;
     unsigned int size = parentVirtualPages * PageSize;
     unsigned int childStart = NachOSpageTable[0].physicalPage * PageSize;
     bcopy(&(machine->mainMemory[parentStart]),&(machine->mainMemory[childStart]),size);

@@ -48,17 +48,12 @@ NachOSThread::NachOSThread(char* threadName)
     if (currentPID > 0) {
        ppid = currentThread->getPID();
        parent = currentThread;
-       DEBUG('z',"doodaooda %d\n",pid);
-       int parentChildCount = currentThread->childCount;
-       DEBUG('z',"doodaooda %d\n",pid);
     }
-    currentPID++;
     threadCount++;
+    currentPID++;
     numInstr = 0;
     childPID = new int[MAXTHREADS];
-       DEBUG('z',"doodaooda %d\n",pid);
     childStatus = new int[MAXTHREADS];
-       DEBUG('z',"doodaooda %d\n",pid);
 #endif
 }
 

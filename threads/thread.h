@@ -56,7 +56,7 @@
 #define StackSize	(4 * 1024)	// in words
 
 
-#define MAXTHREADS 100
+#define MAXTHREADS 1000
 extern int threadCount;
 // Thread state
 enum ThreadStatus { JUST_CREATED, RUNNING, READY, BLOCKED };

@@ -1,6 +1,49 @@
-Sleep:
-	waiting list define in thread/system.h
-	In exception.cc check argument.if argument is 0 then yield cpu otherwise sorted insert 
-currentThread in waitingList and put thread to sleep.
-	In timeinterrupthandler return if waitingList is empty otherwise check top element wait time. if 
-greater than current time then return else remove from waiting List and schedule it.
+CS330 Assignment 1
+SYScall_GetReg:
+	-- Read argument using Machine::ReadRegister(), arguments are stored in 4 register
+	-- Write return value in 2 register using Machine::WriteRegister() 
+SYScall_GetPA:
+	-- Check provided conditions
+        -- Get Translation entry from NachOSpageTable using virtual page number
+	-- Get physical address from translation entry  
+SYScall_GetPID & SYScall_GetPPID:
+	-- Define MAXTHREADS in threads/thread.h
+	-- Add new variable currentPID define in threads/thread.cc initialize to 0
+	-- In NachOSThread constructor assign currentPID to pid and pid of currentThread to ppid
+	-- Increment currentPID
+	-- Created two new public method to access pid and ppid of thread
+	-- For first threaed, pid is 0 and ppid is NULL 
+SYScall_Time:
+	-- Simply return stats->totalTicks
+SYScall_Yield:
+	-- Simply call currentThread->YieldCPU()
+SYScall_Sleep:
+	-- waitingList define in thread/system.h
+	-- In userprog/exception.cc if  argument is 0 then yield cpu 
+        -- If argument is non-zero, then sorted insert currentThread in waitingList with waking time as key and put the thread to sleep.
+	-- In threads/system.cc, timeinterrupthandler return if waitingList is empty otherwise check top element wake time. If greater than current time then return Else remove from waiting List and schedule it.
+SYScall_Exec:
+	-- To obtain filename supplied to syscall, manually translate the address just like in Print_String
+	-- After getting open file using fileSystem->Open()
+	-- Create ProcessAddrSpace for this file and assign it to current thread's space
+	-- Set initial register values and load page table register
+	-- Run new program using machine->Run()
+SYScall_Fork:
+	-- In thread class added public array childPID which stores PID of children, array childStatus which stores exitstatus of children, variable childCount which stores number of children, method InitializeChild which initialize the above arrays, NachOSThread *parent which store pointer to parent thread.
+	-- Increment PC and create new thread
+	-- InitializeChild for current thread which stores pid and status of new child thread to childPID and childStatus array of current thread
+	-- Created new constructor for ProcessAddrSpace which copy address space of current thread into address space of new thread. In userprog/addrspace.cc  new variable totalPhysicalpages is define which store total number of physical pages initialize in main memory. The new constructor map virtual page to physical page + totalPhysicalPages.  
+	-- Return value of child is set to 0 and its state is saved using machine->SaveUserState
+	-- Return value of parent is set pid of child thread and function func is passed to ThreadFork which essentially mimic behaviour of normal thread returning from sleep 
+SYScall_Join:
+	-- Check whether given PID is child of parent by looking in childPID. If it is not return -1.
+	-- If child then check its status using childStatus. If CHILD_LIVE or PARENT_WAITING send parent to sleep and set new status to PARENT_WAITING
+SYScall_Exit:
+	-- New global variable theadCount is created which stores number of threads created.
+	-- If threadCount is 1 then halt the machine
+	-- If parent of the currentThread is alive, check the status of the currentThread in the parent's childStatus array, if PARENT_WAITING, then wake the child up.
+	-- Otherwise just set the exit code of the currentThread in the parent's childStatus and Finish off the currentThread 
+SYScall_NumInstr:
+	-- Add new variable numInstr in thread class which maintains number of instructions perform by threa. It is initialze to 0 in thread's contructor.
+	-- numInstr of currentThread is incremented in machine/mipssim.cc in oneInstruction method
+	-- return numInstr for currentThread

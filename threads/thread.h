@@ -62,7 +62,7 @@ extern int threadCount;
 enum ThreadStatus { JUST_CREATED, RUNNING, READY, BLOCKED };
 
 // Child Status
-enum CHLDSTATUS { NORMAL_EXIT =  0,  CHILD_LIVE, PARENT_WAITING};
+enum CHLDSTATUS { NORMAL_EXIT =  0,  CHILD_LIVE = -2, PARENT_WAITING = -1};
 
 // external function, dummy routine whose sole job is to call NachOSThread::Print
 extern void ThreadPrint(int arg);	 

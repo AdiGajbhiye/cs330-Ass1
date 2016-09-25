@@ -275,14 +275,12 @@ ExceptionHandler(ExceptionType which)
        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
     }
     else if ((which == SyscallException) && (type == SYScall_Exec)) {
-       char filename[20];
+       char filename[50];
        int fileAddr = machine->ReadRegister(4);
        int i = 0;
        machine->ReadMem(fileAddr, 1, &memval);
        while ((*(char*)&memval) != '\0') {
 	  filename[i] = (*(char*)&memval);
-	  //writeDone->P() ;
-          //console->PutChar(*(char*)&memval);
           fileAddr++;
 	  i++;
           machine->ReadMem(fileAddr, 1, &memval);
@@ -290,10 +288,6 @@ ExceptionHandler(ExceptionType which)
        OpenFile *executable = fileSystem->Open(filename);
        ProcessAddrSpace *space;
 
-/*       if (executable == NULL) {
-  	  printf("Unable to open file %s\n", filename);
-	  return;
-       }*/
        space = new ProcessAddrSpace(executable);    
        currentThread->space = space;
 
@@ -312,19 +306,14 @@ ExceptionHandler(ExceptionType which)
        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
        NachOSThread *newThread;
        newThread = new NachOSThread("child");
-       DEBUG('z',"behold child\n");
        currentThread->InitializeChild(newThread->getPID());
        ProcessAddrSpace *space;
-       DEBUG('z',"behold child\n");
        space = new ProcessAddrSpace();
-       DEBUG('z',"behold child space\n");
        newThread->space = space;
        machine->WriteRegister(2,0);
        newThread->SaveUserState();
-       DEBUG('z',"save child %d\n",newThread->getPID());
        machine->WriteRegister(2,newThread->getPID());
        newThread->ThreadFork(func,0);
-       DEBUG('z',"fuck child\n");
     }   
     else if ((which == SyscallException) && (type == SYScall_Exit)) {
        int status = machine->ReadRegister(4);
@@ -343,10 +332,8 @@ ExceptionHandler(ExceptionType which)
             }
             if (currentStatus == PARENT_WAITING) {
                 IntStatus oldLevel = interrupt->SetLevel(IntOff);
-		DEBUG('w',"error1\n");
                 scheduler->ThreadIsReadyToRun(currentThread->parent);
                 (void) interrupt->SetLevel(oldLevel);
-		DEBUG('w',"error2\n");
             }
        }
         
@@ -359,14 +346,11 @@ ExceptionHandler(ExceptionType which)
            if (currentThread->childPID[i] == childPID) {
                childFound = 1;
                status = currentThread->childStatus[i];
-               DEBUG('z',"childID %d status %d\n",i,status);
                if (status == CHILD_LIVE){
                    currentThread->childStatus[i] = PARENT_WAITING;
                    IntStatus oldLevel = interrupt->SetLevel(IntOff);
-		   DEBUG('w',"EERRORR1\n");
                    currentThread->PutThreadToSleep();
                    (void) interrupt->SetLevel(oldLevel);
-		   DEBUG('w',"EERRORR2\n");
                }
                break;
            }

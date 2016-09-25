@@ -56,8 +56,13 @@
 #define StackSize	(4 * 1024)	// in words
 
 
+#define MAXTHREADS 100
+extern int threadCount;
 // Thread state
 enum ThreadStatus { JUST_CREATED, RUNNING, READY, BLOCKED };
+
+// Child Status
+enum CHLDSTATUS { NORMAL_EXIT =  0,  CHILD_LIVE, PARENT_WAITING};
 
 // external function, dummy routine whose sole job is to call NachOSThread::Print
 extern void ThreadPrint(int arg);	 
@@ -101,6 +106,7 @@ class NachOSThread {
     void setStatus(ThreadStatus st) { status = st; }
     char* getName() { return (name); }
     void Print() { printf("%s, ", name); }
+    
 
   private:
     // some of the private data for this class is listed above
@@ -131,6 +137,12 @@ class NachOSThread {
     ProcessAddrSpace *space;			// User code this thread is running.
     int getPID(){ return pid; }
     int getPPID(){ return ppid; }
+    int *childPID;
+    int *childStatus;
+    int childCount;
+    void InitializeChild(int PID);
+    NachOSThread *parent;
+    int numInstr;
 #endif
 };
 

@@ -562,6 +562,7 @@ Machine::OneInstruction(Instruction *instr)
 						// are jumping into lala-land
     registers[PCReg] = registers[NextPCReg];
     registers[NextPCReg] = pcAfter;
+    currentThread->numInstr ++;
 }
 
 //----------------------------------------------------------------------

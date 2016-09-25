@@ -11,7 +11,7 @@ main()
     system_call_PrintInt(sum);
     system_call_PrintChar('\n');
     system_call_PrintString("Executed instruction count: ");
-//    system_call_PrintInt(system_call_GetNumInstr());
+    system_call_PrintInt(system_call_GetNumInstr());
     system_call_PrintChar('\n');
     system_call_Exit(0);
     return 0;

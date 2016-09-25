@@ -27,6 +27,7 @@
 //	endian machine, and we're now running on a big endian machine.
 //----------------------------------------------------------------------
 
+int totalPhysicalPages = 0;
 static void 
 SwapHeader (NoffHeader *noffH)
 {
@@ -94,7 +95,7 @@ ProcessAddrSpace::ProcessAddrSpace(OpenFile *executable)
 					// a separate page, we could set its 
 					// pages to be read-only
     }
-    
+    totalPhysicalPages = totalPhysicalPages + numPagesInVM; // update totalPhysicalPages   
 // zero out the entire address space, to zero the unitialized data segment 
 // and the stack segment
     bzero(machine->mainMemory, size);
@@ -113,6 +114,57 @@ ProcessAddrSpace::ProcessAddrSpace(OpenFile *executable)
 			noffH.initData.size, noffH.initData.inFileAddr);
     }
 
+}
+
+TranslationEntry *
+ProcessAddrSpace::getPageTable(){
+    return NachOSpageTable;
+}
+
+unsigned int
+ProcessAddrSpace::getVirtualPages(){
+    return numPagesInVM;
+}
+
+ProcessAddrSpace::ProcessAddrSpace(){
+    unsigned int i;
+    TranslationEntry *parentTable;
+    parentTable = (currentThread->space)->getPageTable();
+    DEBUG('z',"parent table\n");
+// first, set up the translation
+    unsigned int parentVirtualPages = (currentThread->space)->getVirtualPages(); 
+    DEBUG('z',"parent table pages\n");
+    NachOSpageTable = new TranslationEntry[parentVirtualPages];
+    for (i = 0; i < parentVirtualPages; i++) {
+	NachOSpageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
+	NachOSpageTable[i].physicalPage = i + totalPhysicalPages;
+	NachOSpageTable[i].valid = TRUE;
+	NachOSpageTable[i].use = FALSE;
+	NachOSpageTable[i].dirty = FALSE;
+	NachOSpageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
+					// a separate page, we could set its 
+					// pages to be read-only
+    }
+    DEBUG('z',"child table\n");
+    unsigned int parentStart = parentTable[0].physicalPage * PageSize;
+    DEBUG('z',"parent start %d\n",parentStart);
+    unsigned int size = parentVirtualPages * PageSize;
+    DEBUG('z',"size %d\n",size);
+    unsigned int childStart = NachOSpageTable[0].physicalPage * PageSize;
+    DEBUG('z',"child start %d\n",childStart);
+/*    for (i = 0; i < size; i++) {
+        machine->mainMemory[childStart + i] = machine->mainMemory[parentStart + i];
+        DEBUG('y',"%c",machine->mainMemory[parentStart + i]);
+    }*/
+    bcopy(&(machine->mainMemory[parentStart]),&(machine->mainMemory[childStart]),size);
+    DEBUG('z',"child address space created\n");
+    totalPhysicalPages = totalPhysicalPages + parentVirtualPages; // update totalPhysicalPages   
+    DEBUG('z',"total p pages %d\n",totalPhysicalPages);
+    numPagesInVM = parentVirtualPages;
+    
+// zero out the entire address space, to zero the unitialized data segment 
+// and the stack segment
+    //bzero(machine->mainMemory, size);
 }
 
 //----------------------------------------------------------------------

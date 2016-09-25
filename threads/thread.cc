@@ -34,6 +34,7 @@
 
 
 int currentPID = 0;
+int threadCount = 0;
 NachOSThread::NachOSThread(char* threadName)
 {
     name = threadName;
@@ -43,8 +44,21 @@ NachOSThread::NachOSThread(char* threadName)
 #ifdef USER_PROGRAM
     space = NULL;
     pid = currentPID;
-    if(currentPID > 0)  ppid = currentThread->getPID();
+    childCount = 0;
+    if (currentPID > 0) {
+       ppid = currentThread->getPID();
+       parent = currentThread;
+       DEBUG('z',"doodaooda %d\n",pid);
+       int parentChildCount = currentThread->childCount;
+       DEBUG('z',"doodaooda %d\n",pid);
+    }
     currentPID++;
+    threadCount++;
+    numInstr = 0;
+    childPID = new int[MAXTHREADS];
+       DEBUG('z',"doodaooda %d\n",pid);
+    childStatus = new int[MAXTHREADS];
+       DEBUG('z',"doodaooda %d\n",pid);
 #endif
 }
 
@@ -67,7 +81,6 @@ NachOSThread::~NachOSThread()
     ASSERT(this != currentThread);
     if (stack != NULL)
 	DeallocBoundedArray((char *) stack, StackSize * sizeof(int));
-    currentPID--;
 }
 
 //----------------------------------------------------------------------
@@ -154,6 +167,7 @@ NachOSThread::FinishThread ()
     
     DEBUG('t', "Finishing thread \"%s\"\n", getName());
     
+    threadCount--;
     threadToBeDestroyed = currentThread;
     PutThreadToSleep();					// invokes SWITCH
     // not reached
@@ -323,5 +337,15 @@ NachOSThread::RestoreUserState()
 {
     for (int i = 0; i < NumTotalRegs; i++)
 	machine->WriteRegister(i, userRegisters[i]);
+}
+
+void
+NachOSThread::InitializeChild(int PID)
+{
+    childPID[childCount] = PID;
+    DEBUG('z'," pid: %d childCount: %d\n",PID,childCount);
+    DEBUG('z'," status: %d\n",childStatus[childCount]);
+    childStatus[childCount] = CHILD_LIVE;
+    childCount++;
 }
 #endif

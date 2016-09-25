@@ -60,6 +60,36 @@ static void ReadAvail(int arg) { readAvail->V(); }
 static void WriteDone(int arg) { writeDone->V(); }
 
 List waitingList;
+static void func(int dummy){
+    DEBUG('t', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
+
+    DEBUG('z', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
+    // If the old thread gave up the processor because it was finishing,
+    // we need to delete its carcass.  Note we cannot delete the thread
+    // before now (for example, in NachOSThread::FinishThread()), because up to this
+    // point, we were still running on the old thread's stack!
+    if (threadToBeDestroyed != NULL) {
+        DEBUG('t', "destrying thread \"%s\"\n", currentThread->getName());
+        delete threadToBeDestroyed;
+        threadToBeDestroyed = NULL;
+    }
+    DEBUG('z', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
+#ifdef USER_PROGRAM
+    if (currentThread->space != NULL) {         // if there is an address space
+
+        DEBUG('t', "thread space%s\"\n", currentThread->getName());
+        currentThread->RestoreUserState();     // to restore, do it.
+        DEBUG('t', "thread space restored %d\n", machine->ReadRegister(2));
+        DEBUG('z', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
+        currentThread->space->RestoreStateOnSwitch();
+        DEBUG('t', "thread space restored %d\n", machine->ReadRegister(2));
+        DEBUG('z', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
+    }
+#endif
+    machine->Run();
+    DEBUG('t', "ready to run %d\n", machine->ReadRegister(2));
+    DEBUG('z', "Nowwwwy in thread \"%s\"\n", currentThread->getName());
+}
 
 static void ConvertIntToHex (unsigned v, Console *console)
 {
@@ -275,16 +305,96 @@ ExceptionHandler(ExceptionType which)
        machine->Run();			// jump to the user progam
        ASSERT(FALSE);
     }   
-    else if ((which == SyscallException) && (type == SYScall_Exit)) {
-       int status = machine->ReadRegister(4);
-       //currentThread->FinishThread();
+    else if ((which == SyscallException) && (type == SYScall_Fork)) {
        // Advance program counters.
        machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
        machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
+       NachOSThread *newThread;
+       newThread = new NachOSThread("child");
+       DEBUG('z',"behold child\n");
+       currentThread->InitializeChild(newThread->getPID());
+       ProcessAddrSpace *space;
+       DEBUG('z',"behold child\n");
+       space = new ProcessAddrSpace();
+       DEBUG('z',"behold child space\n");
+       newThread->space = space;
+       machine->WriteRegister(2,0);
+       newThread->SaveUserState();
+       DEBUG('z',"save child %d\n",newThread->getPID());
+       machine->WriteRegister(2,newThread->getPID());
+       newThread->ThreadFork(func,0);
+       DEBUG('z',"fuck child\n");
     }   
+    else if ((which == SyscallException) && (type == SYScall_Exit)) {
+       int status = machine->ReadRegister(4);
+       if (threadCount == 1) interrupt->Halt();
+       if (status == PARENT_WAITING || status == CHILD_LIVE)
+           status = NORMAL_EXIT;
+       
+       if (currentThread->parent != NULL) {
+           int i, currentStatus;
+           for (i = 0;i < (currentThread->parent)->childCount; i++) {
+               if ((currentThread->parent)->childPID[i] == currentThread->getPID()) {
+                   currentStatus = (currentThread->parent)->childStatus[i];
+                   (currentThread->parent)->childStatus[i] = status;
+                   break;
+               }
+            }
+            if (currentStatus == PARENT_WAITING) {
+                IntStatus oldLevel = interrupt->SetLevel(IntOff);
+		DEBUG('w',"error1\n");
+                scheduler->ThreadIsReadyToRun(currentThread->parent);
+                (void) interrupt->SetLevel(oldLevel);
+		DEBUG('w',"error2\n");
+            }
+       }
+        
+       currentThread->FinishThread();       
+    }
+    else if ((which == SyscallException) && (type == SYScall_Join)) {
+       int childPID = machine->ReadRegister(4);
+       int i, childFound = 0, status;
+       for (i = 0; i < currentThread->childCount; i++) {
+           if (currentThread->childPID[i] == childPID) {
+               childFound = 1;
+               status = currentThread->childStatus[i];
+               DEBUG('z',"childID %d status %d\n",i,status);
+               if (status == CHILD_LIVE){
+                   currentThread->childStatus[i] = PARENT_WAITING;
+                   IntStatus oldLevel = interrupt->SetLevel(IntOff);
+		   DEBUG('w',"EERRORR1\n");
+                   currentThread->PutThreadToSleep();
+                   (void) interrupt->SetLevel(oldLevel);
+		   DEBUG('w',"EERRORR2\n");
+               }
+               break;
+           }
+       }
+       status = currentThread->childStatus[i];
+       while (status == PARENT_WAITING) {
+           IntStatus oldLevel = interrupt->SetLevel(IntOff);
+           currentThread->PutThreadToSleep();
+           (void) interrupt->SetLevel(oldLevel);
+           status = currentThread->childStatus[i];
+       }    
+       if(childFound == 0)  status = -1; 
+       machine->WriteRegister(2,status);  
+       // Advance program counters.
+       machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
+       machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
+       machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
+    }
+    else if ((which == SyscallException) && (type == SYScall_NumInstr)) {
+       machine->WriteRegister(2,currentThread->numInstr);
+       // Advance program counters.
+       machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
+       machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
+       machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
+    }
     else {
 	printf("Unexpected user mode exception %d %d\n", which, type);
 	ASSERT(FALSE);
     }
 }
+
